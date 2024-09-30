@@ -3,7 +3,7 @@ name: Display All Merged PR Descriptions
 on:
   push:
     branches:
-      - main
+      - develop
 
 jobs:
   display-all-merged-pr-descriptions:
@@ -42,4 +42,7 @@ jobs:
         run: echo "PR_DESCRIPTIONS=${{ steps.fetch-prs.outputs.pr_descriptions }}" >> $GITHUB_ENV
 
       - name: Display PR descriptions
-        run: echo "The descriptions of all merged PRs are: $PR_DESCRIPTIONS"
+        run: |
+            $GITHUB_ENV  > pr_list.json
+                    # Output the list of pull request numbers
+            cat pr_list.json
