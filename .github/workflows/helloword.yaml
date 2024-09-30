@@ -1,19 +1,19 @@
-name: Store and Display Latest Merged PR Description
+name: Display All Merged PR Descriptions
 
 on:
   push:
     branches:
-      - develop
+      - main
 
 jobs:
-  store-and-display-latest-merged-pr-description:
+  display-all-merged-pr-descriptions:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Fetch latest merged pull request description
-        id: fetch-pr
+      - name: Fetch all merged pull request descriptions
+        id: fetch-prs
         uses: actions/github-script@v6
         with:
           script: |
@@ -21,22 +21,25 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'closed',
-              base: 'main',
               sort: 'updated',
               direction: 'desc',
               per_page: 100
             });
 
-            const latestMergedPR = pulls.find(pr => pr.merged_at && pr.base.ref === 'main');
-            if (latestMergedPR) {
-              return { pr_description: latestMergedPR.body };
+            const mergedPRs = pulls.filter(pr => pr.merged_at && pr.base.ref === 'main');
+            if (mergedPRs.length > 0) {
+              mergedPRs.forEach(pr => {
+                console.log(`PR #${pr.number}: ${pr.title}`);
+                console.log(`Description: ${pr.body}`);
+              });
+              return { pr_descriptions: mergedPRs.map(pr => pr.body).join('\n\n') };
             } else {
-              return { pr_description: 'No merged pull requests found into main.' };
+              console.log('No merged pull requests found into main.');
+              return { pr_descriptions: 'No merged pull requests found into main.' };
             }
 
-      - name: Set PR description as environment variable
-        run: echo "PR_DESCRIPTION=${{ steps.fetch-pr.outputs.pr_description }}" >> $GITHUB_ENV
+      - name: Set PR descriptions as environment variable
+        run: echo "PR_DESCRIPTIONS=${{ steps.fetch-prs.outputs.pr_descriptions }}" >> $GITHUB_ENV
 
-
-      - name: Display PR description
-        run: echo $PR_DESCRIPTION
+      - name: Display PR descriptions
+        run: echo "The descriptions of all merged PRs are: $PR_DESCRIPTIONS"
