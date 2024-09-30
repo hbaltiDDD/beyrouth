@@ -1,28 +1,41 @@
-name: Store PR Description on Merge or Manual Trigger
+name: Store and Display Latest Merged PR Description
 
 on:
   push:
     branches:
       - develop
-  workflow_dispatch:
 
 jobs:
-  list-prs:
+  store-and-display-latest-merged-pr-description:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-    - name: Install GitHub CLI
-      run: sudo apt-get install gh
+      - name: Fetch latest merged pull request description
+        id: fetch-pr
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data: pulls } = await github.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'closed',
+              base: 'main',
+              sort: 'updated',
+              direction: 'desc',
+              per_page: 100
+            });
 
-    - name: Fetch and List PRs
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        # Fetch the list of merged pull requests
-        gh pr list --state merged --base main --json number --jq '.[].number' > pr_list.json
-        
-        # Output the list of pull request numbers
-        cat pr_list.json        
+            const latestMergedPR = pulls.find(pr => pr.merged_at && pr.base.ref === 'main');
+            if (latestMergedPR) {
+              return { pr_description: latestMergedPR.body };
+            } else {
+              return { pr_description: 'No merged pull requests found into main.' };
+            }
+
+      - name: Set PR description as environment variable
+        run: echo "PR_DESCRIPTION=${{ steps.fetch-pr.outputs.pr_description }}" >> $GITHUB_ENV
+
+      - name: Display PR description
+        run: echo $PR_DESCRIPTION
