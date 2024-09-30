@@ -17,7 +17,7 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            const { data: pulls } = await github.pulls.list({
+            const { data: pulls } = await github.rest.pulls.list({
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'closed',
@@ -36,6 +36,7 @@ jobs:
 
       - name: Set PR description as environment variable
         run: echo "PR_DESCRIPTION=${{ steps.fetch-pr.outputs.pr_description }}" >> $GITHUB_ENV
+
 
       - name: Display PR description
         run: echo $PR_DESCRIPTION
