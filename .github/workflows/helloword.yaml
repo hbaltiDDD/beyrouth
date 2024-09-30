@@ -1,48 +1,34 @@
-name: Display All Merged PR Descriptions
+name: Store PR Description on Merge or Manual Trigger
 
 on:
   push:
     branches:
       - develop
+  workflow_dispatch:
 
 jobs:
-  display-all-merged-pr-descriptions:
+  list-prs:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+    - name: Checkout code
+      uses: actions/checkout@v2
 
-      - name: Fetch all merged pull request descriptions
-        id: fetch-prs
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const { data: pulls } = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'closed',
-              sort: 'updated',
-              direction: 'desc',
-              per_page: 100
-            });
+    - name: Install GitHub CLI
+      run: sudo apt-get install gh
 
-            const mergedPRs = pulls.filter(pr => pr.merged_at && pr.base.ref === 'main');
-            if (mergedPRs.length > 0) {
-              mergedPRs.forEach(pr => {
-                console.log(`PR #${pr.number}: ${pr.title}`);
-                console.log(`Description: ${pr.body}`);
-              });
-              return { pr_descriptions: mergedPRs.map(pr => pr.body).join('\n\n') };
-            } else {
-              console.log('No merged pull requests found into main.');
-              return { pr_descriptions: 'No merged pull requests found into main.' };
-            }
-
-      - name: Set PR descriptions as environment variable
-        run: echo "PR_DESCRIPTIONS=${{ steps.fetch-prs.outputs.pr_descriptions }}" >> $GITHUB_ENV
-
-      - name: Display PR descriptions
-        run: |
-            $GITHUB_ENV  > pr_list.json
-                    # Output the list of pull request numbers
-            cat pr_list.json
+    - name: Fetch and Display Latest Merged PR Description
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Fetch the latest merged pull request into main
+        latest_pr=$(gh pr list --state merged --base main --sort updated --json number,title,body --jq '.')
+        
+        # Extract the description of the latest merged pull request
+        pr_number=$(echo "$latest_pr" | jq -r '.number')
+        pr_title=$(echo "$latest_pr" | jq -r '.title')
+        pr_description=$(echo "$latest_pr" | jq -r '.body')
+        
+        # Output the description of the latest merged pull request
+        echo "Latest Merged Pull Request: #$pr_number - $pr_title"
+        echo "Description: $pr_description"
