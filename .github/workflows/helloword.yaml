@@ -1,23 +1,28 @@
-name: hello world workflow
+name: Store PR Description on Merge or Manual Trigger
+
 on:
-    push:
-        branches:
-            - main
-    pull_request:
-        branches:
-            -main
-    workflow_dispatch:        
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
 jobs:
-    hello:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v2
-            - name: hello_world
-              run: echo "Hello world 2"
-              shell: bash
-    goodbye:
-        runs-on: ubuntu-latest
-        steps:
-            - name: goodbye_world
-              run: echo "Goodbye world"
-              shell: bash            
+  list-prs:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Install GitHub CLI
+      run: sudo apt-get install gh
+
+    - name: Fetch and List PRs
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Fetch the list of merged pull requests
+        gh pr list --state merged --base main --json number --jq '.[].number' > pr_list.json
+        
+        # Output the list of pull request numbers
+        cat pr_list.json        
